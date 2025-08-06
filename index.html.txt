@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Changa – Tu próximo trabajo está aquí</title>
+  <meta name="description" content="Conectamos talento local con quienes necesitan un servicio rápido y confiable.">
+  <link rel="stylesheet" href="style.css" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome -->
+  <script src="https://kit.fontawesome.com/a81368914c.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <!-- HERO -->
+  <header class="hero">
+    <nav class="nav container">
+      <h1 class="logo">Changa</h1>
+      <ul class="nav__links">
+        <li><a href="#about">Sobre nosotros</a></li>
+        <li><a href="#plans">Membresías</a></li>
+        <li><a href="#contact">Contacto</a></li>
+      </ul>
+    </nav>
+    <div class="hero__content container">
+      <h2>Trabajá con pasión.<br>Encontrá quien te necesita.</h2>
+      <p>Unite a miles de changarines que ya viven de lo que aman. Registrate hoy y empezá a ganar.</p>
+      <a href="#register-worker" class="btn btn--primary">Quiero trabajar</a>
+      <a href="#post-need" class="btn btn--outline">Necesito un changarín</a>
+    </div>
+  </header>
+
+  <!-- REGISTER WORKER -->
+  <section id="register-worker" class="section">
+    <div class="container grid-2">
+      <div>
+        <h3>Registrate como changarín</h3>
+        <p>Completá tus datos y empezá a recibir ofertas cerca tuyo.</p>
+        <form class="form" id="form-worker">
+          <input type="text" placeholder="Nombre completo" required />
+          <input type="email" placeholder="Correo electrónico" required />
+          <select required>
+            <option value="">Rubro principal</option>
+            <option value="plomeria">Plomería</option>
+            <option value="electricidad">Electricidad</option>
+            <option value="jardineria">Jardinería</option>
+            <option value="pintura">Pintura</option>
+            <option value="otro">Otro</option>
+          </select>
+          <button type="submit" class="btn btn--primary">Enviar</button>
+        </form>
+      </div>
+      <div class="img-wrapper">
+        <img src="https://images.unsplash.com/photo-1520390138845-fd2d229dd553?auto=format&fit=crop&w=800&q=60" alt="Changarín sonriendo" />
+      </div>
+    </div>
+  </section>
+
+  <!-- POST NEED -->
+  <section id="post-need" class="section bg-grey">
+    <div class="container grid-2">
+      <div class="img-wrapper order-2">
+        <img src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=800&q=60" alt="Cliente satisfecho" />
+      </div>
+      <div>
+        <h3>Publicá tu necesidad</h3>
+        <p>Contanos qué necesitás y recibí presupuestos en minutos.</p>
+        <form class="form" id="form-need">
+          <input type="text" placeholder="¿Qué necesitás?" required />
+          <textarea placeholder="Descripción del trabajo" rows="3" required></textarea>
+          <input type="text" placeholder="Ubicación" required />
+          <button type="submit" class="btn btn--primary">Publicar gratis</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLANS -->
+  <section id="plans" class="section">
+    <div class="container">
+      <h3>Elegí tu membresía</h3>
+      <div class="plans">
+        <div class="plan">
+          <h4>Gratis</h4>
+          <span class="price">$0<span>/mes</span></span>
+          <ul>
+            <li>Perfil público</li>
+            <li>Hasta 3 ofertas mensuales</li>
+          </ul>
+          <button class="btn btn--outline">Actual</button>
+        </div>
+        <div class="plan plan--featured">
+          <h4>Pro</h4>
+          <span class="price">$2.990<span>/mes</span></span>
+          <ul>
+            <li>Perfil destacado</li>
+            <li>Ofertas ilimitadas</li>
+            <li>Soporte prioritario</li>
+          </ul>
+          <button class="btn btn--primary">Comenzar</button>
+        </div>
+        <div class="plan">
+          <h4>Empresa</h4>
+          <span class="price">$9.990<span>/mes</span></span>
+          <ul>
+            <li>Hasta 5 cuentas</li>
+            <li>Facturación mensual</li>
+            <li>Dashboard avanzado</li>
+          </ul>
+          <button class="btn btn--outline">Contactar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIOS -->
+  <section class="section bg-grey">
+    <div class="container">
+      <h3>Lo que dicen los changarines</h3>
+      <div class="testimonials">
+        <blockquote>
+          <p>“Con Changa dejé mi empleo en fábrica y hoy gano el doble pintando casas.”</p>
+          <cite>— Martín, pintor</cite>
+        </blockquote>
+        <blockquote>
+          <p>“Me contactan todos los días y elijo los trabajos que más me convienen.”</p>
+          <cite>— Lucía, plomera</cite>
+        </blockquote>
+        <blockquote>
+          <p>“Publicar un trabajo es súper fácil. En 10 minutos ya tenía 3 presupuestos.”</p>
+          <cite>— Diego, cliente</cite>
+        </blockquote>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about" class="section">
+    <div class="container grid-2">
+      <div>
+        <h3>Sobre nosotros</h3>
+        <p>Changa nació en 2024 con la misión de democratizar el acceso al trabajo informal en Argentina. Creemos que cada habilidad vale y que la tecnología puede conectar talento con oportunidades en minutos.</p>
+      </div>
+      <div class="img-wrapper">
+        <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=800&q=60" alt="Equipo reunido" />
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT / WHATSAPP -->
+  <section id="contact" class="section">
+    <div class="container center">
+      <h3>¿Dudas? Escribinos</h3>
+      <a href="https://wa.me/5491122334455?text=Hola,%20quiero%20más%20info%20sobre%20Changa" class="btn btn--wa">
+        <i class="fab fa-whatsapp"></i> Chatear por WhatsApp
+      </a>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>&copy; 2024 Changa – Hecho con ❤️ en Argentina</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

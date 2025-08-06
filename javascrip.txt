@@ -1,0 +1,828 @@
+/**
+ * Sistema de gestión de changas para CHANGA
+ * Maneja creación, búsqueda, filtrado y gestión de changas
+ */
+
+// Utilidades necesarias para el funcionamiento del sistema
+class Utils {
+    /**
+     * Obtiene datos del localStorage
+     * @param {string} key - Clave del localStorage
+     * @param {*} defaultValue - Valor por defecto si no existe
+     * @returns {*} Datos almacenados o valor por defecto
+     */
+    static getStorage(key, defaultValue = null) {
+        try {
+            const item = localStorage.getItem(key);
+            return item ? JSON.parse(item) : defaultValue;
+        } catch (error) {
+            console.error('Error al obtener del localStorage:', error);
+            return defaultValue;
+        }
+    }
+
+    /**
+     * Guarda datos en localStorage
+     * @param {string} key - Clave del localStorage
+     * @param {*} value - Valor a guardar
+     */
+    static setStorage(key, value) {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+        } catch (error) {
+            console.error('Error al guardar en localStorage:', error);
+        }
+    }
+
+    /**
+     * Genera un ID único
+     * @returns {string} ID único
+     */
+    static generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    }
+
+    /**
+     * Verifica si un valor es requerido (no vacío)
+     * @param {*} value - Valor a verificar
+     * @returns {boolean} True si el valor es válido
+     */
+    static isRequired(value) {
+        return value !== null && value !== undefined && value.toString().trim() !== '';
+    }
+
+    /**
+     * Capitaliza la primera letra de una cadena
+     * @param {string} str - Cadena a capitalizar
+     * @returns {string} Cadena capitalizada
+     */
+    static capitalize(str) {
+        if (!str) return '';
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    /**
+     * Trunca un texto a una longitud específica
+     * @param {string} text - Texto a truncar
+     * @param {number} length - Longitud máxima
+     * @returns {string} Texto truncado
+     */
+    static truncateText(text, length) {
+        if (!text || text.length <= length) return text;
+        return text.substring(0, length) + '...';
+    }
+
+    /**
+     * Formatea una fecha para mostrar
+     * @param {string|Date} date - Fecha a formatear
+     * @returns {string} Fecha formateada
+     */
+    static formatDate(date) {
+        if (!date) return '';
+        const d = new Date(date);
+        return d.toLocaleDateString('es-AR', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    /**
+     * Formatea un precio para mostrar
+     * @param {number} price - Precio a formatear
+     * @returns {string} Precio formateado
+     */
+    static formatPrice(price) {
+        if (!price || price <= 0) return 'A convenir';
+        return new Intl.NumberFormat('es-AR', {
+            style: 'currency',
+            currency: 'ARS',
+            minimumFractionDigits: 0
+        }).format(price);
+    }
+
+    /**
+     * Debounce para optimizar búsquedas
+     * @param {Function} func - Función a ejecutar
+     * @param {number} wait - Tiempo de espera en ms
+     * @returns {Function} Función con debounce
+     */
+    static debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+}
+
+// Sistema de autenticación simplificado para el ejemplo
+class Auth {
+    /**
+     * Obtiene el usuario actual
+     * @returns {Object|null} Usuario actual o null
+     */
+    static getCurrentUser() {
+        return Utils.getStorage('changa_current_user', null);
+    }
+
+    /**
+     * Verifica si hay un usuario autenticado
+     * @returns {boolean} True si hay usuario autenticado
+     */
+    static isAuthenticated() {
+        return this.getCurrentUser() !== null;
+    }
+}
+
+// Sistema principal de changas
+class ChangaSystem {
+    constructor() {
+        this.storageKey = 'changa_changas';
+        this.applicationsKey = 'changa_applications';
+        this.currentFilters = {};
+        this.init();
+    }
+
+    /**
+     * Inicializa el sistema de changas
+     */
+    init() {
+        this.initializeExampleChangas();
+        this.setupFilters();
+        this.setupEventListeners();
+        this.renderChangas();
+    }
+
+    /**
+     * Inicializa changas de ejemplo
+     */
+    initializeExampleChangas() {
+        const existingChangas = Utils.getStorage(this.storageKey, []);
+        
+        if (existingChangas.length === 0) {
+            const exampleChangas = [
+                {
+                    id: 'changa_1',
+                    title: 'Ayuda con mudanza departamento 2 ambientes',
+                    description: 'Necesito ayuda para mudar mis cosas de un departamento a otro en la misma zona. Son pocos muebles: cama, mesa, sillas y cajas. Tengo el transporte.',
+                    category: 'mudanza',
+                    location: 'Palermo, CABA',
+                    date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // En 2 días
+                    budget: 8000,
+                    duration: '3-4',
+                    clientId: 'user_1',
+                    clientName: 'María González',
+                    status: 'active',
+                    createdAt: new Date().toISOString(),
+                    applications: []
+                },
+                {
+                    id: 'changa_2',
+                    title: 'Limpieza profunda post obra',
+                    description: 'Terminé una remodelación y necesito una limpieza profunda. Incluye quitar polvo de obra, limpiar pisos, ventanas y baños. Traigo todos los productos.',
+                    category: 'limpieza',
+                    location: 'Villa Crespo, CABA',
+                    date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // En 3 días
+                    budget: 12000,
+                    duration: '5-8',
+                    clientId: 'user_1',
+                    clientName: 'María González',
+                    status: 'active',
+                    createdAt: new Date().toISOString(),
+                    applications: []
+                },
+                {
+                    id: 'changa_3',
+                    title: 'Jardinería y poda de plantas',
+                    description: 'Tengo un pequeño jardín que necesita mantenimiento: poda de arbustos, limpieza de malezas y plantado de nuevas especies. Duración aproximada medio día.',
+                    category: 'jardineria',
+                    location: 'San Isidro, GBA Norte',
+                    date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), // En 5 días
+                    budget: 6000,
+                    duration: '3-4',
+                    clientId: 'user_1',
+                    clientName: 'María González',
+                    status: 'active',
+                    createdAt: new Date().toISOString(),
+                    applications: []
+                },
+                {
+                    id: 'changa_4',
+                    title: 'Instalación de estanterías y cuadros',
+                    description: 'Necesito ayuda para instalar varias estanterías en la pared y colgar cuadros. Tengo todas las herramientas necesarias.',
+                    category: 'otros',
+                    location: 'Recoleta, CABA',
+                    date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), // Mañana
+                    budget: 4000,
+                    duration: '1-2',
+                    clientId: 'user_1',
+                    clientName: 'María González',
+                    status: 'active',
+                    createdAt: new Date().toISOString(),
+                    applications: []
+                }
+            ];
+            
+            Utils.setStorage(this.storageKey, exampleChangas);
+        }
+    }
+
+    /**
+     * Configura los event listeners
+     */
+    setupEventListeners() {
+        // Formulario de crear changa
+        const changaForm = document.getElementById('changa-form');
+        if (changaForm) {
+            changaForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleCreateChanga(e);
+            });
+        }
+
+        // Formulario de aplicar a changa
+        const applyForm = document.getElementById('apply-form');
+        if (applyForm) {
+            applyForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleApplyToChanga(e);
+            });
+        }
+
+        // Cerrar modales
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('close')) {
+                this.closeModal(e.target.getAttribute('data-modal'));
+            }
+            if (e.target.classList.contains('modal')) {
+                this.closeModal(e.target.id);
+            }
+        });
+    }
+
+    /**
+     * Configura los filtros de búsqueda
+     */
+    setupFilters() {
+        const categoryFilter = document.getElementById('category-filter');
+        const locationFilter = document.getElementById('location-filter');
+        const dateFilter = document.getElementById('date-filter');
+        const applyFiltersBtn = document.getElementById('apply-filters');
+
+        if (applyFiltersBtn) {
+            applyFiltersBtn.addEventListener('click', () => {
+                this.applyFilters();
+            });
+        }
+
+        // Aplicar filtros en tiempo real para algunos campos
+        if (locationFilter) {
+            locationFilter.addEventListener('input', Utils.debounce(() => {
+                this.applyFilters();
+            }, 500));
+        }
+    }
+
+    /**
+     * Obtiene todas las changas
+     * @returns {Array} Lista de changas
+     */
+    getAllChangas() {
+        return Utils.getStorage(this.storageKey, []);
+    }
+
+    /**
+     * Obtiene changas filtradas
+     * @param {Object} filters - Filtros a aplicar
+     * @returns {Array} Changas filtradas
+     */
+    getFilteredChangas(filters = {}) {
+        let changas = this.getAllChangas();
+        
+        // Filtrar solo changas activas por defecto
+        changas = changas.filter(changa => changa.status === 'active');
+
+        // Aplicar filtros
+        if (filters.category && filters.category !== '') {
+            changas = changas.filter(changa => changa.category === filters.category);
+        }
+
+        if (filters.location && filters.location !== '') {
+            const searchLocation = filters.location.toLowerCase();
+            changas = changas.filter(changa => 
+                changa.location.toLowerCase().includes(searchLocation)
+            );
+        }
+
+        if (filters.date && filters.date !== '') {
+            const filterDate = new Date(filters.date);
+            changas = changas.filter(changa => {
+                const changaDate = new Date(changa.date);
+                return changaDate.toDateString() === filterDate.toDateString();
+            });
+        }
+
+        // Ordenar por fecha de creación (más recientes primero)
+        changas.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        return changas;
+    }
+
+    /**
+     * Crea una nueva changa
+     * @param {Object} changaData - Datos de la changa
+     * @returns {Object} Resultado de la creación
+     */
+    createChanga(changaData) {
+        const currentUser = Auth.getCurrentUser();
+        if (!currentUser || currentUser.userType !== 'cliente') {
+            return {
+                success: false,
+                message: 'Solo los clientes pueden crear changas'
+            };
+        }
+
+        // Validar datos
+        const validation = this.validateChangaData(changaData);
+        if (!validation.isValid) {
+            return {
+                success: false,
+                message: validation.message,
+                errors: validation.errors
+            };
+        }
+
+        // Crear nueva changa
+        const newChanga = {
+            id: Utils.generateId(),
+            title: changaData.title.trim(),
+            description: changaData.description.trim(),
+            category: changaData.category,
+            location: changaData.location.trim(),
+            date: changaData.date,
+            budget: changaData.budget ? parseFloat(changaData.budget) : null,
+            duration: changaData.duration,
+            clientId: currentUser.id,
+            clientName: currentUser.name,
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            applications: []
+        };
+
+        // Guardar changa
+        const changas = this.getAllChangas();
+        changas.push(newChanga);
+        Utils.setStorage(this.storageKey, changas);
+
+        return {
+            success: true,
+            message: 'Changa creada exitosamente',
+            changa: newChanga
+        };
+    }
+
+    /**
+     * Maneja la creación de una changa desde el formulario
+     * @param {Event} event - Evento del formulario
+     */
+    handleCreateChanga(event) {
+        const formData = new FormData(event.target);
+        const changaData = Object.fromEntries(formData.entries());
+
+        const result = this.createChanga(changaData);
+        
+        if (result.success) {
+            this.showNotification('Changa creada exitosamente', 'success');
+            event.target.reset();
+            this.renderChangas();
+        } else {
+            this.showNotification(result.message, 'error');
+            this.displayFormErrors(result.errors || {});
+        }
+    }
+
+    /**
+     * Maneja la aplicación a una changa
+     * @param {Event} event - Evento del formulario
+     */
+    handleApplyToChanga(event) {
+        const changaId = event.target.getAttribute('data-changa-id');
+        const formData = new FormData(event.target);
+        const applicationData = Object.fromEntries(formData.entries());
+
+        // Aquí iría la lógica para enviar la aplicación
+        console.log('Aplicando a changa:', changaId, applicationData);
+        
+        this.showNotification('Aplicación enviada exitosamente', 'success');
+        this.closeModal('apply-modal');
+        event.target.reset();
+    }
+
+    /**
+     * Obtiene las changas de un usuario
+     * @param {string} userId - ID del usuario
+     * @returns {Array} Changas del usuario
+     */
+    getUserChangas(userId) {
+        const changas = this.getAllChangas();
+        return changas.filter(changa => changa.clientId === userId);
+    }
+
+    /**
+     * Actualiza una changa
+     * @param {string} changaId - ID de la changa
+     * @param {Object} updateData - Datos a actualizar
+     * @returns {Object} Resultado de la actualización
+     */
+    updateChanga(changaId, updateData) {
+        const changas = this.getAllChangas();
+        const changaIndex = changas.findIndex(c => c.id === changaId);
+        
+        if (changaIndex === -1) {
+            return {
+                success: false,
+                message: 'Changa no encontrada'
+            };
+        }
+
+        // Verificar permisos
+        const currentUser = Auth.getCurrentUser();
+        if (!currentUser || changas[changaIndex].clientId !== currentUser.id) {
+            return {
+                success: false,
+                message: 'No tienes permisos para editar esta changa'
+            };
+        }
+
+        // Actualizar changa
+        changas[changaIndex] = {
+            ...changas[changaIndex],
+            ...updateData,
+            updatedAt: new Date().toISOString()
+        };
+
+        Utils.setStorage(this.storageKey, changas);
+
+        return {
+            success: true,
+            message: 'Changa actualizada exitosamente',
+            changa: changas[changaIndex]
+        };
+    }
+
+    /**
+     * Elimina una changa
+     * @param {string} changaId - ID de la changa
+     * @returns {Object} Resultado de la eliminación
+     */
+    deleteChanga(changaId) {
+        const changas = this.getAllChangas();
+        const changaIndex = changas.findIndex(c => c.id === changaId);
+        
+        if (changaIndex === -1) {
+            return {
+                success: false,
+                message: 'Changa no encontrada'
+            };
+        }
+
+        // Verificar permisos
+        const currentUser = Auth.getCurrentUser();
+        if (!currentUser || changas[changaIndex].clientId !== currentUser.id) {
+            return {
+                success: false,
+                message: 'No tienes permisos para eliminar esta changa'
+            };
+        }
+
+        // Eliminar changa
+        changas.splice(changaIndex, 1);
+        Utils.setStorage(this.storageKey, changas);
+
+        return {
+            success: true,
+            message: 'Changa eliminada exitosamente'
+        };
+    }
+
+    /**
+     * Aplica los filtros actuales
+     */
+    applyFilters() {
+        const categoryFilter = document.getElementById('category-filter');
+        const locationFilter = document.getElementById('location-filter');
+        const dateFilter = document.getElementById('date-filter');
+
+        this.currentFilters = {
+            category: categoryFilter ? categoryFilter.value : '',
+            location: locationFilter ? locationFilter.value : '',
+            date: dateFilter ? dateFilter.value : ''
+        };
+
+        this.renderChangas();
+    }
+
+    /**
+     * Renderiza las changas en la UI
+     */
+    renderChangas() {
+        const container = document.getElementById('changas-list');
+        if (!container) return;
+
+        const changas = this.getFilteredChangas(this.currentFilters);
+        
+        if (changas.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🔍</div>
+                    <h3>No se encontraron changas</h3>
+                    <p>Intenta ajustar los filtros de búsqueda</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = changas.map(changa => this.createChangaCard(changa)).join('');
+        
+        // Agregar event listeners a los botones de aplicar
+        container.querySelectorAll('.btn-apply').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const changaId = e.target.getAttribute('data-changa-id');
+                this.showApplyModal(changaId);
+            });
+        });
+    }
+
+    /**
+     * Crea el HTML de una card de changa
+     * @param {Object} changa - Datos de la changa
+     * @returns {string} HTML de la card
+     */
+    createChangaCard(changa) {
+        const currentUser = Auth.getCurrentUser();
+        const canApply = currentUser && 
+                        currentUser.userType === 'trabajador' && 
+                        changa.clientId !== currentUser.id;
+
+        return `
+            <div class="changa-card">
+                <div class="changa-header">
+                    <h3 class="changa-title">${changa.title}</h3>
+                    <span class="changa-category">${Utils.capitalize(changa.category)}</span>
+                </div>
+                
+                <p class="changa-description">${Utils.truncateText(changa.description, 120)}</p>
+                
+                <div class="changa-meta">
+                    <div class="changa-meta-item">
+                        <span>📍 ${changa.location}</span>
+                    </div>
+                    <div class="changa-meta-item">
+                        <span>📅 ${Utils.formatDate(changa.date)}</span>
+                    </div>
+                    <div class="changa-meta-item">
+                        <span>⏱️ ${this.formatDuration(changa.duration)}</span>
+                    </div>
+                    <div class="changa-meta-item">
+                        <span>👤 ${changa.clientName}</span>
+                    </div>
+                </div>
+                
+                <div class="changa-footer">
+                    <div class="changa-price">${Utils.formatPrice(changa.budget)}</div>
+                    ${canApply ? 
+                        `<button class="btn-apply" data-changa-id="${changa.id}">Aplicar</button>` :
+                        `<span class="badge badge-secondary">Ver detalles</span>`
+                    }
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Muestra el modal para aplicar a una changa
+     * @param {string} changaId - ID de la changa
+     */
+    showApplyModal(changaId) {
+        const changa = this.getAllChangas().find(c => c.id === changaId);
+        if (!changa) return;
+
+        const modal = document.getElementById('apply-modal');
+        const detailsContainer = document.getElementById('apply-changa-details');
+        
+        if (detailsContainer) {
+            detailsContainer.innerHTML = `
+                <div class="apply-changa-info">
+                    <h3>${changa.title}</h3>
+                    <p><strong>Cliente:</strong> ${changa.clientName}</p>
+                    <p><strong>Ubicación:</strong> ${changa.location}</p>
+                    <p><strong>Fecha:</strong> ${Utils.formatDate(changa.date)}</p>
+                    <p><strong>Presupuesto:</strong> ${Utils.formatPrice(changa.budget)}</p>
+                    <p><strong>Descripción:</strong> ${changa.description}</p>
+                </div>
+            `;
+        }
+
+        // Guardar ID de changa en el formulario
+        const form = document.getElementById('apply-form');
+        if (form) {
+            form.setAttribute('data-changa-id', changaId);
+        }
+
+        this.openModal('apply-modal');
+    }
+
+    /**
+     * Abre un modal
+     * @param {string} modalId - ID del modal
+     */
+    openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    /**
+     * Cierra un modal
+     * @param {string} modalId - ID del modal
+     */
+    closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+    }
+
+    /**
+     * Formatea la duración de una changa
+     * @param {string} duration - Duración
+     * @returns {string} Duración formateada
+     */
+    formatDuration(duration) {
+        const durations = {
+            '1-2': '1-2 horas',
+            '3-4': '3-4 horas',
+            '5-8': '5-8 horas',
+            '1-dia': 'Todo el día',
+            'varios-dias': 'Varios días'
+        };
+        return durations[duration] || duration;
+    }
+
+    /**
+     * Valida los datos de una changa
+     * @param {Object} changaData - Datos a validar
+     * @returns {Object} Resultado de la validación
+     */
+    validateChangaData(changaData) {
+        const errors = {};
+        let isValid = true;
+
+        // Validar título
+        if (!Utils.isRequired(changaData.title)) {
+            errors.title = 'El título es requerido';
+            isValid = false;
+        } else if (changaData.title.length < 10) {
+            errors.title = 'El título debe tener al menos 10 caracteres';
+            isValid = false;
+        }
+
+        // Validar descripción
+        if (!Utils.isRequired(changaData.description)) {
+            errors.description = 'La descripción es requerida';
+            isValid = false;
+        } else if (changaData.description.length < 20) {
+            errors.description = 'La descripción debe tener al menos 20 caracteres';
+            isValid = false;
+        }
+
+        // Validar categoría
+        if (!changaData.category) {
+            errors.category = 'La categoría es requerida';
+            isValid = false;
+        }
+
+        // Validar ubicación
+        if (!Utils.isRequired(changaData.location)) {
+            errors.location = 'La ubicación es requerida';
+            isValid = false;
+        }
+
+        // Validar fecha
+        if (!changaData.date) {
+            errors.date = 'La fecha es requerida';
+            isValid = false;
+        } else {
+            const selectedDate = new Date(changaData.date);
+            const now = new Date();
+            if (selectedDate < now) {
+                errors.date = 'La fecha debe ser futura';
+                isValid = false;
+            }
+        }
+
+        // Validar presupuesto (opcional)
+        if (changaData.budget && parseFloat(changaData.budget) < 0) {
+            errors.budget = 'El presupuesto debe ser positivo';
+            isValid = false;
+        }
+
+        return {
+            isValid,
+            errors,
+            message: isValid ? 'Datos válidos' : 'Por favor, corrige los errores'
+        };
+    }
+
+    /**
+     * Muestra errores en el formulario
+     * @param {Object} errors - Errores a mostrar
+     */
+    displayFormErrors(errors) {
+        // Limpiar errores previos
+        document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+
+        // Mostrar nuevos errores
+        Object.keys(errors).forEach(field => {
+            const input = document.querySelector(`[name="${field}"]`);
+            if (input) {
+                const errorElement = input.parentElement.querySelector('.error-message');
+                if (errorElement) {
+                    errorElement.textContent = errors[field];
+                }
+            }
+        });
+    }
+
+    /**
+     * Muestra una notificación
+     * @param {string} message - Mensaje a mostrar
+     * @param {string} type - Tipo de notificación (success, error, warning)
+     */
+    showNotification(message, type = 'info') {
+        // Crear elemento de notificación
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        
+        // Estilos básicos para la notificación
+        Object.assign(notification.style, {
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            padding: '15px 20px',
+            borderRadius: '5px',
+            color: 'white',
+            fontWeight: 'bold',
+            zIndex: '10000',
+            maxWidth: '300px',
+            backgroundColor: type === 'success' ? '#27AE60' : 
+                           type === 'error' ? '#E74C3C' : 
+                           type === 'warning' ? '#F39C12' : '#3498DB'
+        });
+
+        document.body.appendChild(notification);
+
+        // Remover después de 3 segundos
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.parentElement.removeChild(notification);
+            }
+        }, 3000);
+    }
+
+    /**
+     * Obtiene las categorías disponibles
+     * @returns {Array} Lista de categorías
+     */
+    getCategories() {
+        return [
+            { value: 'limpieza', label: 'Limpieza' },
+            { value: 'mudanza', label: 'Mudanza' },
+            { value: 'jardineria', label: 'Jardinería' },
+            { value: 'plomeria', label: 'Plomería' },
+            { value: 'electricidad', label: 'Electricidad' },
+            { value: 'pintura', label: 'Pintura' },
+            { value: 'otros', label: 'Otros' }
+        ];
+    }
+}
+
+// Inicializar el sistema cuando se carga la página
+document.addEventListener('DOMContentLoaded', () => {
+    window.ChangaSystem = new ChangaSystem();
+});
+
+// Exportar para uso global
+window.Utils = Utils;
+window.Auth = Auth;
